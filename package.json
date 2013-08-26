@@ -3,14 +3,14 @@
 
     "version": "0.0.1",
 
-    "description": "Pretty-print the difference between two JavaScript objects or literals in file diff format",
+    "description": "Pretty-print the difference between two JavaScript objects or literals",
 
     "author": "Feng Qiu <feng@ban90.com>",
 
     "license": "MIT",
-  
-    "keywords": ["print", "object", "diff", "debug", "logging"],
-  
+
+    "keywords": ["print", "diff", "object", "array", "string", "text", "debug", "logging"],
+
     "main" : "./index.js",
 
     "scripts": {
@@ -19,12 +19,17 @@
     },
 
     "dependencies": {
-        "objectdiff": "1.1.x"
+        "objectdiff": "1.1.x",
+        "chardiff": "0.1.x"
     },
 
     "devDependencies": {
         "mocha": "*",
-        "jshint": "*"
+        "jshint": "*",
+        "chai": "1.7.x",
+        "chai-adhoc": "0.3.x",
+        "chai-common": "*",
+        "chai-highlight": "*"
     },
 
     "engines": {
@@ -35,7 +40,7 @@
         "type": "git",
         "url": "https://github.com/halfninety/printdiff.git"
     },
-  
+
     "bugs": {
         "url": "https://github.com/halfninety/printdiff/issues"
     }

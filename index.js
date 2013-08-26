@@ -23,12 +23,12 @@ var red = '\x1B[31m',
  * @returns {string} the output string.
  * @private
  */
-function _lineBreak(str, columns) {
+function _lineBreak(str, wrapWidth) {
     var result = '';
 
     // As an optimization, if the length of str (including color sequences)
     // doesn't exceed the console's width, this is definitely an one-liner.
-    if (str.length <= columns) {
+    if (str.length <= wrapWidth) {
         return str;
     }
 
@@ -48,7 +48,7 @@ function _lineBreak(str, columns) {
             }
         } else {
             ct++;
-            if (str[i] === '\n' || ct === columns) {
+            if (str[i] === '\n' || ct === wrapWidth) {
                 // We have finished counting a line.
                 if (start) {
                     // This isn't the first line, prepend '\n' and 4 spaces.
@@ -56,7 +56,7 @@ function _lineBreak(str, columns) {
                 } else {
                     // This is the first line, all subsequent lines must leave
                     // space for the 4 spaces prepended.
-                    columns -= 4;
+                    wrapWidth -= 4;
                 }
                 // Add the line to the result.
                 if (str[i] === '\n') {
@@ -82,16 +82,16 @@ function _lineBreak(str, columns) {
     return result;
 }
 
-function _printLine(line, prefix, columns, style) {
+function _printLine(line, prefix, wrapWidth, style) {
     if (prefix.length >= 3) {
         prefix += ' ';
     } else {
         prefix += new Array(5 - prefix.length).join(' ');
     }
 
-    columns -= prefix.length;
-    if (line.length > columns) {
-        line = line.substring(0, columns - 3) + '...';
+    wrapWidth -= prefix.length;
+    if (line.length > wrapWidth) {
+        line = line.substring(0, wrapWidth - 3) + '...';
     }
 
     line = prefix + line;
@@ -107,7 +107,7 @@ function _printColumns() {
 
 }
 
-function _printContextLines(result, lines, curLine, postContextLine, contextLines, columns) {
+function _printContextLines(result, lines, curLine, postContextLine, contextLines, wrapWidth) {
     var startLine, endLine = 0,
         i;
 
@@ -118,7 +118,7 @@ function _printContextLines(result, lines, curLine, postContextLine, contextLine
         startLine = postContextLine;
         endLine = Math.min(postContextLine + contextLines, curLine);
         for (i = startLine; i < endLine; i++) {
-            result.push(_printLine(lines[i], i + 1 + '', columns, null));
+            result.push(_printLine(lines[i], i + 1 + '', wrapWidth, null));
         }
     }
 
@@ -127,7 +127,7 @@ function _printContextLines(result, lines, curLine, postContextLine, contextLine
     startLine = Math.max(curLine - contextLines, endLine, 0);
     endLine = curLine;
     for (i = startLine; i < endLine; i++) {
-        result.push(_printLine(lines[i], i + 1 + '', columns, null));
+        result.push(_printLine(lines[i], i + 1 + '', wrapWidth, null));
     }
 }
 
@@ -146,7 +146,7 @@ function _printContextLines(result, lines, curLine, postContextLine, contextLine
  * @returns {Array} empty if equal, otherwise a list of changes.
  * @private
  */
-function _generateStringDiff(a, b, columns) {
+function _generateStringDiff(a, b, wrapWidth) {
     // A "line" is a line in one of the operands.
     // A "chunk" is a displayed line on the screen, limited by tty's width.
     var maxChunks = 200,
@@ -205,10 +205,10 @@ function _generateStringDiff(a, b, columns) {
         } else if (change.type === '-') {   // Removed
             // Print post-context lines for the previous change and pre-context lines
             // for this change.
-            _printContextLines(result, lines, curLine, postContextLine, contextLines, columns);
+            _printContextLines(result, lines, curLine, postContextLine, contextLines, wrapWidth);
 
             // Print the removed line.
-            result.push(_printLine(lines[curLine], curLine + 1 + '', columns, red));
+            result.push(_printLine(lines[curLine], curLine + 1 + '', wrapWidth, red));
 
             // Update `postContextLine`.
             postContextLine = curLine + 1;
@@ -218,14 +218,14 @@ function _generateStringDiff(a, b, columns) {
         } else if (change.type === '+') {   // Added
             // Print post-context lines for the previous change and pre-context lines
             // for this change.
-            _printContextLines(result, lines, curLine, postContextLine, contextLines, columns);
+            _printContextLines(result, lines, curLine, postContextLine, contextLines, wrapWidth);
 
             // Print the added line, strip the trailing line break if existed.
             ln = change.right;
             if (ln[ln.length - 1] === '\n') {
                 ln = ln.substring(0, ln.length - 1);
             }
-            result.push(_printLine(ln, '', columns, green));
+            result.push(_printLine(ln, '', wrapWidth, green));
 
             // Update `postContextLine`.
             postContextLine = curLine;
@@ -233,7 +233,7 @@ function _generateStringDiff(a, b, columns) {
         } else {    // Changed
             // Print post-context lines for the previous change and pre-context lines
             // for this change.
-            _printContextLines(result, lines, curLine, postContextLine, contextLines, columns);
+            _printContextLines(result, lines, curLine, postContextLine, contextLines, wrapWidth);
 
             // Process char-level diffs
             colRes = [];
@@ -258,14 +258,14 @@ function _generateStringDiff(a, b, columns) {
 //            result.push(colRes.join(''));
 
             // Print the removed line.
-            result.push(_printLine(lines[curLine], curLine + 1 + '', columns, red));
+            result.push(_printLine(lines[curLine], curLine + 1 + '', wrapWidth, red));
 
             // Print the added line, strip the trailing line break if existed.
             ln = change.right;
             if (ln[ln.length - 1] === '\n') {
                 ln = ln.substring(0, ln.length - 1);
             }
-            result.push(_printLine(ln, '', columns, green));
+            result.push(_printLine(ln, '', wrapWidth, green));
 
             // Update `postContextLine`.
             postContextLine = curLine + 1;
@@ -276,7 +276,7 @@ function _generateStringDiff(a, b, columns) {
 
     // Finally, print post-context lines for the last change.
     _printContextLines(result, lines, Math.min(postContextLine + contextLines, lines.length),
-                       postContextLine, contextLines, columns);
+                       postContextLine, contextLines, wrapWidth);
 
     return result;
 }

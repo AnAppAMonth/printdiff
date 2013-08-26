@@ -1,4 +1,5 @@
 
+/* global describe, it */
 var chai = require('chai'),
     expect = chai.expect,
     chaiCommon = require('chai-common'),

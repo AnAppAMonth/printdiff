@@ -52,4 +52,28 @@ describe('When diffing strings,', function() {
             expect(stdout).to.startWith('\x1B[31m1   a\x1B[0m\n');
         });
     });
+
+    describe('post-context lines', function() {
+        it('should be fully displayed when in the middle of the text', function() {
+            var a = 'a\nb\nc\nd\ne\nf\ng\nh\n',
+                b = 'a\nb\nc\ndx\ne\nf\ng\nh\n';
+
+            patchedPrintDiff(a, b);
+            expect(stdout).to.endWith('\x1B[32m    dx\x1B[0m\n5   e\n6   f\n7   g\n');
+        });
+        it('should partly be displayed when near text boundary', function() {
+            var a = 'a\nb\nc\nd\ne\nf\ng\nh\n',
+                b = 'a\nb\nc\nd\ne\nfx\ng\nh\n';
+
+            patchedPrintDiff(a, b);
+            expect(stdout).to.endWith('\x1B[32m    fx\x1B[0m\n7   g\n8   h\n');
+        });
+        it('should not be displayed at all when at text boundary', function() {
+            var a = 'a\nb\nc\nd\ne\nf\ng\nh\n',
+                b = 'a\nb\nc\nd\ne\nf\ng\nhx\n';
+
+            patchedPrintDiff(a, b);
+            expect(stdout).to.endWith('\x1B[32m    hx\x1B[0m\n');
+        });
+    });
 });

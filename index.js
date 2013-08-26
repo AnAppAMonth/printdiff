@@ -108,7 +108,7 @@ function _printColumns() {
 }
 
 // Returns the new `lastPrintedLine`.
-function _printContextLines(result, lines, curLine, lastPrintedLine, postContextLine, contextLines) {
+function _printContextLines(result, lines, curLine, lastPrintedLine, postContextLine, contextLines, columns) {
     var startLine, endLine,
         i;
 
@@ -120,6 +120,7 @@ function _printContextLines(result, lines, curLine, lastPrintedLine, postContext
         endLine = Math.min(postContextLine + contextLines, curLine);
         for (i = startLine; i < endLine; i++) {
             result.push(_printLine(lines[i], i + 1 + '', columns, null));
+            lastPrintedLine = i;
         }
     }
 
@@ -128,6 +129,7 @@ function _printContextLines(result, lines, curLine, lastPrintedLine, postContext
     startLine = Math.max(curLine - contextLines, lastPrintedLine + 1, 0);
     for (i = startLine; i < curLine; i++) {
         result.push(_printLine(lines[i], i + 1 + '', columns, null));
+        lastPrintedLine = i;
     }
 
     return lastPrintedLine;
@@ -160,6 +162,10 @@ function _generateStringDiff(a, b, columns) {
     // Context lines are fetched from `lines`.
     var lines = a.split('\n'),
         i, j, k, ln;
+
+    if (lines[lines.length-1] === '') {
+        lines.pop();
+    }
 
     var result = [],
         // The current (upcoming) line number in `a`.
@@ -205,28 +211,25 @@ function _generateStringDiff(a, b, columns) {
         if (change.type === '=') {      // Unchanged
             curLine++;
         } else if (change.type === '-') {   // Removed
-            // Print context lines `curLine-contextLines` ~ `curLine-1` in `a`
-            // if necessary.
-            startLine = Math.max(curLine - contextLines, lastPrintedLine + 1, 0);
-            for (j = startLine; j < curLine; j++) {
-                result.push(_printLine(lines[j], j + 1 + '', columns, null));
-            }
+            // Print post-context lines for the previous change and pre-context lines
+            // for this change.
+            lastPrintedLine = _printContextLines(result, lines, curLine, lastPrintedLine,
+                                                 postContextLine, contextLines, columns);
 
             // Print the removed line.
             result.push(_printLine(lines[curLine], curLine + 1 + '', columns, red));
 
-            // Update `lastPrintedLine`.
+            // Update `lastPrintedLine` and `postContextLine`.
             lastPrintedLine = curLine;
+            postContextLine = curLine + 1;
 
             curLine++;
 
         } else if (change.type === '+') {   // Added
-            // Print context lines `curLine-contextLines` ~ `curLine-1` in `a`
-            // if necessary.
-            startLine = Math.max(curLine - contextLines, lastPrintedLine + 1, 0);
-            for (j = startLine; j < curLine; j++) {
-                result.push(_printLine(lines[j], j + 1 + '', columns, null));
-            }
+            // Print post-context lines for the previous change and pre-context lines
+            // for this change.
+            lastPrintedLine = _printContextLines(result, lines, curLine, lastPrintedLine,
+                                                 postContextLine, contextLines, columns);
 
             // Print the added line, strip the trailing line break if existed.
             ln = change.right;
@@ -235,16 +238,14 @@ function _generateStringDiff(a, b, columns) {
             }
             result.push(_printLine(ln, '', columns, green));
 
-            // Update `lastPrintedLine`.
-            lastPrintedLine = curLine - 1;
+            // Update `postContextLine`.
+            postContextLine = curLine;
 
         } else {    // Changed
-            // Print context lines `curLine-contextLines` ~ `curLine-1` in `a`
-            // if necessary.
-            startLine = Math.max(curLine - contextLines, lastPrintedLine + 1, 0);
-            for (j = startLine; j < curLine; j++) {
-                result.push(_printLine(lines[j], j + 1 + '', columns, null));
-            }
+            // Print post-context lines for the previous change and pre-context lines
+            // for this change.
+            lastPrintedLine = _printContextLines(result, lines, curLine, lastPrintedLine,
+                                                 postContextLine, contextLines, columns);
 
             // Process char-level diffs
             colRes = [];
@@ -279,12 +280,17 @@ function _generateStringDiff(a, b, columns) {
             }
             result.push(_printLine(ln, '', columns, green));
 
-            // Update `lastPrintedLine`.
+            // Update `lastPrintedLine` and `postContextLine`.
             lastPrintedLine = curLine;
+            postContextLine = curLine + 1;
 
             curLine++;
         }
     }
+
+    // Finally, print post-context lines for the last change.
+    _printContextLines(result, lines, Math.min(postContextLine + contextLines, lines.length),
+                       lastPrintedLine, postContextLine, contextLines, columns);
 
     return result;
 }

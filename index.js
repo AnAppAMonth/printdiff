@@ -209,15 +209,13 @@ function _generateStringDiff(a, b, wrapWidth) {
         lines.pop();
     }
 
+    // Each entry in `result` is a chunk.
     var result = [],
         // The current (upcoming) line number in `a`.
         curLine = 0,
         // The first post-context line from the last change, we need to record
         // this because we can only print it when we are at the next change.
-        postContextLine = -1,
-        // The total number of chunks printed so far, used to enforce the
-        // `maxChunks` setting.
-        totalChunks = 0;
+        postContextLine = -1;
 
     // Holds char-level result before merging into `result`.
     var colRes,
@@ -277,7 +275,6 @@ function _generateStringDiff(a, b, wrapWidth) {
             // - endColumn: end column of the value in the line.
             colRes = [];
             curColumn = 0;
-            lineChunks = 0;
 
             var lastEntry;
             for (j = 0; j < change.diff.length; j++) {
@@ -338,6 +335,11 @@ function _generateStringDiff(a, b, wrapWidth) {
 
                     curColumn += chg.left.length;
                 }
+
+                // Each entry in `colRes` contains one or more chunks.
+                if (colRes.length > maxChunksPerLine) {
+                    break;
+                }
             }
 
             lastEntry = colRes[colRes.length-1];
@@ -358,6 +360,7 @@ function _generateStringDiff(a, b, wrapWidth) {
             }
             maxPrefixLen = Math.max(maxPrefixLen, 4);
 
+            lineChunks = 0;
             for (j = 0; j < colRes.length; j++) {
                 var entry = colRes[j],
                     prefix;
@@ -371,6 +374,13 @@ function _generateStringDiff(a, b, wrapWidth) {
                 prefix = cyan + prefix + clear + new Array(maxPrefixLen - prefix.length + 1).join(' ');
 
                 var res = _lineBreak(prefix + entry.value, maxPrefixLen, wrapWidth).split('\n');
+
+                lineChunks += res.length;
+                // At least print one `colRes` entry, after that, we make sure
+                // we don't surpass the maximums in config.
+                if (j > 0 && (lineChunks > maxChunksPerLine || result.length + res.length > maxChunks)) {
+                    break;
+                }
                 result = result.concat(res);
             }
 
@@ -378,6 +388,10 @@ function _generateStringDiff(a, b, wrapWidth) {
             postContextLine = curLine + 1;
 
             curLine++;
+        }
+
+        if (result.length >= maxChunks) {
+            break;
         }
     }
 

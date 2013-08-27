@@ -5,6 +5,16 @@ var charDiff = require('chardiff');
 
 var consoleColumns = process.stdout.columns;
 
+// Variables used when printing a string diff.
+// A "line" is a line in one of the operands.
+// A "chunk" is a displayed line on the screen, limited by tty's width.
+var maxChunks = 200,
+    maxChunksPerLine = 20,
+    contextLines = 3,
+    contextColumns = 25,
+    maxColumns = 50;
+
+// ANSI color codes for styling.
 var red = '\x1B[31m',
     green = '\x1B[32m',
     cyan = '\x1B[36m',
@@ -147,14 +157,6 @@ function _printContextLines(result, lines, curLine, postContextLine, contextLine
  * @private
  */
 function _generateStringDiff(a, b, wrapWidth) {
-    // A "line" is a line in one of the operands.
-    // A "chunk" is a displayed line on the screen, limited by tty's width.
-    var maxChunks = 200,
-        maxChunksPerLine = 20,
-        contextLines = 3,
-        contextColumns = 25,
-        maxColumns = 50;
-
     // Context lines are fetched from `lines`.
     var lines = a.split('\n'),
         i, j, k, ln;

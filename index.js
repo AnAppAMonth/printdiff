@@ -116,10 +116,8 @@ function _printLine(line, prefix, wrapWidth, style) {
     return line;
 }
 
-function _printColumns() {
-
-}
-
+// NOTE that it's the responsibility of the caller to guarantee that `curLine`
+// doesn't surpass `lines.length`.
 function _printContextLines(result, lines, curLine, postContextLine, wrapWidth) {
     var startLine, endLine = 0,
         i;
@@ -144,6 +142,47 @@ function _printContextLines(result, lines, curLine, postContextLine, wrapWidth) 
     }
 }
 
+// NOTE that it's the responsibility of the caller to guarantee that `curColumn`
+// doesn't surpass `line.length`.
+function _printContextColumns(colRes, line, curColumn) {
+    if (colRes.length > 0) {
+        var lastEntry = colRes[colRes.length - 1];
+
+        // See if the new change should be printed in the same entry as the last
+        // change or in a new entry.
+        if (curColumn - lastEntry.endColumn > contextColumns * 2) {     // New entry
+            // Print post-context columns for the last change in the old entry.
+            lastEntry.value += line.substring(lastEntry.endColumn, lastEntry.endColumn + contextColumns);
+            lastEntry.value += '...';
+            lastEntry.endColumn += contextColumns;
+
+            // Print pre-context columns for the current change in the new entry.
+            colRes.push({
+                value: '...' + line.substring(curColumn - contextColumns, curColumn),
+                startColumn: curColumn - contextColumns,
+                endColumn: curColumn
+            });
+        } else {    // Old entry
+            // Print context columns `lastEntry.endColumn` ~ `curColumn-1` in
+            // `line` in the old entry.
+            lastEntry.value += line.substring(lastEntry.endColumn, curColumn);
+            lastEntry.endColumn = curColumn;
+        }
+    } else {
+        // This is the first change, just print pre-context columns for it in a
+        // new entry.
+        var start = Math.max(curColumn - contextColumns, 0);
+        colRes.push({
+            value: line.substring(start, curColumn),
+            startColumn: start,
+            endColumn: curColumn
+        });
+        if (start > 0) {
+            colRes[0].value = '...' + colRes[0].value;
+        }
+    }
+}
+
 /**
  * This function uses the `diff` library to diff two strings and generates a
  * nice-looking diff (inspired by file diffs) from the result.
@@ -162,7 +201,7 @@ function _printContextLines(result, lines, curLine, postContextLine, wrapWidth) 
 function _generateStringDiff(a, b, wrapWidth) {
     // Context lines are fetched from `lines`.
     var lines = a.split('\n'),
-        i, j, k, ln;
+        i, j, ln;
 
     if (lines[lines.length-1] === '') {
         lines.pop();
@@ -176,28 +215,15 @@ function _generateStringDiff(a, b, wrapWidth) {
         postContextLine = -1,
         // The total number of chunks printed so far, used to enforce the
         // `maxChunks` setting.
-        totalChunks = 0,
-        startLine;
+        totalChunks = 0;
 
     // Holds char-level result before merging into `result`.
     var colRes,
         // The current (upcoming) column number in the current line in 'a'.
         curColumn,
-        // The first post-context column from the last change, we need to record
-        // this because we can only print it when we are at the next change.
-        postContextColumn,
         // The number of chunks printed so far for the current line, used to
         // enforce the `maxChunksPerLine` setting.
-        lineChunks = 0,
-        startColumn;
-
-    // Format strings
-    var changeStr = [];
-    var removeStr = ['-   %s',
-                     '\x1B[31m-   %s\x1B[0m'];
-    var addStr = ['+   %s',
-                  '\x1B[32m+   %s\x1B[0m'];
-//    var idx = colors ? 1 : 0;
+        lineChunks;
 
 
     var changeset = charDiff(a, b);
@@ -207,6 +233,7 @@ function _generateStringDiff(a, b, wrapWidth) {
 
         if (change.type === '=') {      // Unchanged
             curLine++;
+
         } else if (change.type === '-') {   // Removed
             // Print post-context lines for the previous change and pre-context lines
             // for this change.
@@ -241,36 +268,109 @@ function _generateStringDiff(a, b, wrapWidth) {
             _printContextLines(result, lines, curLine, postContextLine, wrapWidth);
 
             // Process char-level diffs
+            ln = lines[curLine];
+            // Each entry of `colRes` is an object with the following members:
+            // - value: text value (incl. styling) of this entry, can span multiple chunks.
+            // - startColumn: start column of the value in the line.
+            // - endColumn: end column of the value in the line.
             colRes = [];
             curColumn = 0;
-            postContextColumn = -1;
+            lineChunks = 0;
+
+            var lastEntry;
             for (j = 0; j < change.diff.length; j++) {
                 var chg = change.diff[j];
 
-                if (chg.type === '=') {
-                    curColumn++;
-                } else if (chg.type === '-') {
-                    curColumn++;
+                if (chg.type === '=') {      // Unchanged
+                    curColumn += chg.value.length;
 
-                } else if (chg.type === '+') {
-                    curColumn++;
+                } else if (chg.type === '-') {   // Removed
+                    // Print post-context columns for the previous change and pre-context columns
+                    // for this change.
+                    _printContextColumns(colRes, ln, curColumn);
 
-                } else {
-                    curColumn++;
+                    // Print the removed columns.
+                    lastEntry = colRes[colRes.length-1];
+                    if (chg.left.length <= maxColumns) {
+                        lastEntry.value += red + chg.left + clear;
+                    } else {
+                        lastEntry.value += red + chg.left.substring(0, maxColumns) + '...' + clear;
+                    }
+                    lastEntry.endColumn += chg.left.length;
 
+                    curColumn += chg.left.length;
+
+                } else if (chg.type === '+') {   // Added
+                    // Print post-context columns for the previous change and pre-context columns
+                    // for this change.
+                    _printContextColumns(colRes, ln, curColumn);
+
+                    // Print the added columns.
+                    lastEntry = colRes[colRes.length-1];
+                    if (chg.right.length <= maxColumns) {
+                        lastEntry.value += green + chg.right + clear;
+                    } else {
+                        lastEntry.value += green + chg.right.substring(0, maxColumns) + '...' + clear;
+                    }
+
+                } else {    // Changed
+                    // Print post-context columns for the previous change and pre-context columns
+                    // for this change.
+                    _printContextColumns(colRes, ln, curColumn);
+
+                    // Print the removed columns.
+                    lastEntry = colRes[colRes.length-1];
+                    if (chg.left.length <= maxColumns) {
+                        lastEntry.value += red + chg.left + clear;
+                    } else {
+                        lastEntry.value += red + chg.left.substring(0, maxColumns) + '...' + clear;
+                    }
+                    lastEntry.endColumn += chg.left.length;
+
+                    // Print the added columns.
+                    if (chg.right.length <= maxColumns) {
+                        lastEntry.value += green + chg.right + clear;
+                    } else {
+                        lastEntry.value += green + chg.right.substring(0, maxColumns) + '...' + clear;
+                    }
+
+                    curColumn += chg.left.length;
                 }
             }
-//            result.push(colRes.join(''));
 
-            // Print the removed line.
-            result.push(_printLine(lines[curLine], curLine + 1 + '', wrapWidth, red));
+            lastEntry = colRes[colRes.length-1];
 
-            // Print the added line, strip the trailing line break if existed.
-            ln = change.right;
-            if (ln[ln.length - 1] === '\n') {
-                ln = ln.substring(0, ln.length - 1);
+            // Print post-context columns for the last change.
+            _printContextColumns(colRes, ln, Math.min(lastEntry.endColumn + contextColumns, ln.length));
+            if (lastEntry.endColumn < ln.length) {
+                lastEntry.value += '...';
             }
-            result.push(_printLine(ln, '', wrapWidth, green));
+
+            // Merge results in `colRes` into `result`.
+            var maxPrefixLen;
+
+            if (lastEntry.startColumn === 0) {
+                maxPrefixLen = (curLine + 1 + '').length + 1;
+            } else {
+                maxPrefixLen = (curLine + 1 + ',' + (lastEntry.startColumn + 1)).length + 1;
+            }
+            maxPrefixLen = Math.max(maxPrefixLen, 4);
+
+            for (j = 0; j < colRes.length; j++) {
+                var entry = colRes[j],
+                    prefix;
+
+                // Only print start column number if it's not 1.
+                if (entry.startColumn === 0) {
+                    prefix = curLine + 1 + '';
+                } else {
+                    prefix = curLine + 1 + ',' + (entry.startColumn + 1);
+                }
+                prefix = cyan + prefix + clear + new Array(maxPrefixLen - prefix.length + 1).join(' ');
+
+                var res = _lineBreak(prefix + entry.value, maxPrefixLen, wrapWidth).split('\n');
+                result = result.concat(res);
+            }
 
             // Update `postContextLine`.
             postContextLine = curLine + 1;

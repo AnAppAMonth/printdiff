@@ -36,21 +36,21 @@ describe('When diffing strings,', function() {
                 b = 'a\nb\nc\nd\nex\nf\ng\nh\n';
 
             patchedPrintDiff(a, b);
-            expect(stdout).to.startWith('2   b\n3   c\n4   d\n\x1B[31m5   e\x1B[0m\n');
+            expect(stdout).to.startWith('2   b\n3   c\n4   d\n\x1B[36m5\x1B[0m   e\x1B[32mx\x1B[0m\n');
         });
         it('should partly be displayed when near text boundary', function() {
             var a = 'a\nb\nc\nd\ne\nf\ng\nh\n',
                 b = 'a\nb\ncx\nd\ne\nf\ng\nh\n';
 
             patchedPrintDiff(a, b);
-            expect(stdout).to.startWith('1   a\n2   b\n\x1B[31m3   c\x1B[0m\n');
+            expect(stdout).to.startWith('1   a\n2   b\n\x1B[36m3\x1B[0m   c\x1B[32mx\x1B[0m\n');
         });
         it('should not be displayed at all when at text boundary', function() {
             var a = 'a\nb\nc\nd\ne\nf\ng\nh\n',
                 b = 'ax\nb\nc\nd\ne\nf\ng\nh\n';
 
             patchedPrintDiff(a, b);
-            expect(stdout).to.startWith('\x1B[31m1   a\x1B[0m\n');
+            expect(stdout).to.startWith('\x1B[36m1\x1B[0m   a\x1B[32mx\x1B[0m\n');
         });
     });
 
@@ -60,21 +60,21 @@ describe('When diffing strings,', function() {
                 b = 'a\nb\nc\ndx\ne\nf\ng\nh\n';
 
             patchedPrintDiff(a, b);
-            expect(stdout).to.endWith('\x1B[32m    dx\x1B[0m\n5   e\n6   f\n7   g\n');
+            expect(stdout).to.endWith('\x1B[36m4\x1B[0m   d\x1B[32mx\x1B[0m\n5   e\n6   f\n7   g\n');
         });
         it('should partly be displayed when near text boundary', function() {
             var a = 'a\nb\nc\nd\ne\nf\ng\nh\n',
                 b = 'a\nb\nc\nd\ne\nfx\ng\nh\n';
 
             patchedPrintDiff(a, b);
-            expect(stdout).to.endWith('\x1B[32m    fx\x1B[0m\n7   g\n8   h\n');
+            expect(stdout).to.endWith('\x1B[36m6\x1B[0m   f\x1B[32mx\x1B[0m\n7   g\n8   h\n');
         });
         it('should not be displayed at all when at text boundary', function() {
             var a = 'a\nb\nc\nd\ne\nf\ng\nh\n',
                 b = 'a\nb\nc\nd\ne\nf\ng\nhx\n';
 
             patchedPrintDiff(a, b);
-            expect(stdout).to.endWith('\x1B[32m    hx\x1B[0m\n');
+            expect(stdout).to.endWith('\x1B[36m8\x1B[0m   h\x1B[32mx\x1B[0m\n');
         });
     });
 });

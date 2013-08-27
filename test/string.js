@@ -36,7 +36,7 @@ describe('When diffing strings,', function() {
                 b = 'a\nb\nc\nd\nex\nf\ng\nh\n';
 
             patchedPrintDiff(a, b);
-            expect(stdout).to.startWith('2   b\n3   c\n4   d\n\x1B[36m5\x1B[0m   e\x1B[32mx\x1B[0m\n');
+            expect(stdout).to.startWith('...\n2   b\n3   c\n4   d\n\x1B[36m5\x1B[0m   e\x1B[32mx\x1B[0m\n');
         });
         it('should partly be displayed when near text boundary', function() {
             var a = 'a\nb\nc\nd\ne\nf\ng\nh\n',
@@ -60,7 +60,7 @@ describe('When diffing strings,', function() {
                 b = 'a\nb\nc\ndx\ne\nf\ng\nh\n';
 
             patchedPrintDiff(a, b);
-            expect(stdout).to.endWith('\x1B[36m4\x1B[0m   d\x1B[32mx\x1B[0m\n5   e\n6   f\n7   g\n');
+            expect(stdout).to.endWith('\x1B[36m4\x1B[0m   d\x1B[32mx\x1B[0m\n5   e\n6   f\n7   g\n...\n');
         });
         it('should partly be displayed when near text boundary', function() {
             var a = 'a\nb\nc\nd\ne\nf\ng\nh\n',

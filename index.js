@@ -138,6 +138,13 @@ function _printContextLines(result, lines, curLine, postContextLine, wrapWidth) 
     // Print context lines `curLine-contextLines` ~ `curLine-1` in `a`
     // if necessary.
     startLine = Math.max(curLine - contextLines, endLine, 0);
+    if (postContextLine < 0 && startLine > 0) {
+        // This is the first change, and `startLine` isn't the first line.
+        result.push('...');
+    } else if (startLine > endLine) {
+        // There is a break between the last change and this one.
+        result.push('...');
+    }
     endLine = curLine;
     for (i = startLine; i < endLine; i++) {
         result.push(_printLine(lines[i], i + 1 + '', wrapWidth, null));
@@ -398,6 +405,10 @@ function _generateStringDiff(a, b, wrapWidth) {
     // Finally, print post-context lines for the last change.
     _printContextLines(result, lines, Math.min(postContextLine + contextLines, lines.length),
                        postContextLine, wrapWidth);
+    if (postContextLine + contextLines < lines.length) {
+        // We haven't reached the end of the input.
+        result.push('...');
+    }
 
     return result;
 }

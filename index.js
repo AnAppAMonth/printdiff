@@ -85,12 +85,14 @@ function _lineBreak(str, indent, wrapWidth) {
         }
     }
 
-    // Add the last line to the result.
-    if (start) {
-        // This isn't the first line, prepend '\n' and `indent` spaces.
-        result += '\n' + prefix;
+    // Add the last line to the result if it's not empty.
+    if (start !== str.length) {
+        if (start) {
+            // This isn't the first line, prepend '\n' and `indent` spaces.
+            result += '\n' + prefix;
+        }
+        result += str.substring(start);
     }
-    result += str.substring(start);
 
     return result;
 }

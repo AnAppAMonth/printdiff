@@ -21,20 +21,23 @@ var red = '\x1B[31m',
     clear = '\x1B[0m';
 
 /**
- * This function takes a string to be printed to the console, and formats
- * it so that when it wraps, 4 spaces are prepended to the next line to
+ * This function takes a string to be printed to the console, wraps it,
+ * and formats it so that each wrapped line is indented by `indent` to
  * make it more readable.
  *
- * The input string can contain color sequences which take spaces in the
+ * The input string can contain color sequences which take space in the
  * string, but not in the printed output. So this function must be able
  * to deal with them.
  *
- * @param {string} str - the input string.
+ * @param {string} str - The input string.
+ * @param {number} indent - Indent amount of wrapped lines.
+ * @param {number} wrapWidth - The wrapping width.
  * @returns {string} the output string.
  * @private
  */
-function _lineBreak(str, wrapWidth) {
-    var result = '';
+function _lineBreak(str, indent, wrapWidth) {
+    var result = '',
+        prefix = new Array(indent + 1).join(' ');
 
     // As an optimization, if the length of str (including color sequences)
     // doesn't exceed the console's width, this is definitely an one-liner.
@@ -61,12 +64,12 @@ function _lineBreak(str, wrapWidth) {
             if (str[i] === '\n' || ct === wrapWidth) {
                 // We have finished counting a line.
                 if (start) {
-                    // This isn't the first line, prepend '\n' and 4 spaces.
-                    result += '\n    ';
+                    // This isn't the first line, prepend '\n' and `indent` spaces.
+                    result += '\n' + prefix;
                 } else {
                     // This is the first line, all subsequent lines must leave
-                    // space for the 4 spaces prepended.
-                    wrapWidth -= 4;
+                    // space for the indentation.
+                    wrapWidth -= indent;
                 }
                 // Add the line to the result.
                 if (str[i] === '\n') {
@@ -84,8 +87,8 @@ function _lineBreak(str, wrapWidth) {
 
     // Add the last line to the result.
     if (start) {
-        // This isn't the first line, prepend '\n' and 4 spaces.
-        result += '\n    ';
+        // This isn't the first line, prepend '\n' and `indent` spaces.
+        result += '\n' + prefix;
     }
     result += str.substring(start);
 
@@ -332,17 +335,17 @@ function _generateObjectDiff(a, b, colors) {
             result.push(_lineBreak(util.format(changeStr[idx]
                                              , path
                                              , util.inspect(node.removed)
-                                             , util.inspect(node.added)), consoleColumns));
+                                             , util.inspect(node.added)), 4, consoleColumns));
 
         } else if (node.changed === 'removed') {
             result.push(_lineBreak(util.format(removeStr[idx]
                                              , path
-                                             , util.inspect(node.value)), consoleColumns));
+                                             , util.inspect(node.value)), 4, consoleColumns));
 
         } else if (node.changed === 'added') {
             result.push(_lineBreak(util.format(addStr[idx]
                                              , path
-                                             , util.inspect(node.value)), consoleColumns));
+                                             , util.inspect(node.value)), 4, consoleColumns));
         }
     }
 
@@ -359,7 +362,7 @@ function _generateObjectDiff(a, b, colors) {
         if (a !== b) {
             result.push(_lineBreak(util.format(changeStr2[idx]
                                              , util.inspect(a)
-                                             , util.inspect(b)), consoleColumns));
+                                             , util.inspect(b)), 4, consoleColumns));
         }
     }
 

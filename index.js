@@ -117,7 +117,7 @@ function _printColumns() {
 
 }
 
-function _printContextLines(result, lines, curLine, postContextLine, contextLines, wrapWidth) {
+function _printContextLines(result, lines, curLine, postContextLine, wrapWidth) {
     var startLine, endLine = 0,
         i;
 
@@ -207,7 +207,7 @@ function _generateStringDiff(a, b, wrapWidth) {
         } else if (change.type === '-') {   // Removed
             // Print post-context lines for the previous change and pre-context lines
             // for this change.
-            _printContextLines(result, lines, curLine, postContextLine, contextLines, wrapWidth);
+            _printContextLines(result, lines, curLine, postContextLine, wrapWidth);
 
             // Print the removed line.
             result.push(_printLine(lines[curLine], curLine + 1 + '', wrapWidth, red));
@@ -220,7 +220,7 @@ function _generateStringDiff(a, b, wrapWidth) {
         } else if (change.type === '+') {   // Added
             // Print post-context lines for the previous change and pre-context lines
             // for this change.
-            _printContextLines(result, lines, curLine, postContextLine, contextLines, wrapWidth);
+            _printContextLines(result, lines, curLine, postContextLine, wrapWidth);
 
             // Print the added line, strip the trailing line break if existed.
             ln = change.right;
@@ -235,7 +235,7 @@ function _generateStringDiff(a, b, wrapWidth) {
         } else {    // Changed
             // Print post-context lines for the previous change and pre-context lines
             // for this change.
-            _printContextLines(result, lines, curLine, postContextLine, contextLines, wrapWidth);
+            _printContextLines(result, lines, curLine, postContextLine, wrapWidth);
 
             // Process char-level diffs
             colRes = [];
@@ -278,7 +278,7 @@ function _generateStringDiff(a, b, wrapWidth) {
 
     // Finally, print post-context lines for the last change.
     _printContextLines(result, lines, Math.min(postContextLine + contextLines, lines.length),
-                       postContextLine, contextLines, wrapWidth);
+                       postContextLine, wrapWidth);
 
     return result;
 }

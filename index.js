@@ -519,6 +519,28 @@ function _generateObjectDiff(a, b, colors) {
     return result;
 }
 
-module.exports = function(a, b) {
+function printdiff(a, b) {
     console.log(_generateObjectDiff(a, b, true).join('\n'));
-};
+}
+
+Object.defineProperty(printdiff, 'configStringDiff', {
+    value: function(_maxChunks, _maxChunksPerLine, _maxColumns, _contextLines, _contextColumns) {
+        if (_maxChunks !== undefined) {
+            maxChunks = parseInt(_maxChunks, 10);
+        }
+        if (_maxChunksPerLine !== undefined) {
+            maxChunksPerLine = parseInt(_maxChunksPerLine, 10);
+        }
+        if (_maxColumns !== undefined) {
+            maxColumns = parseInt(_maxColumns, 10);
+        }
+        if (_contextLines !== undefined) {
+            contextLines = parseInt(_contextLines, 10);
+        }
+        if (_contextColumns !== undefined) {
+            contextColumns = parseInt(_contextColumns, 10);
+        }
+    }
+});
+
+module.exports = printdiff;

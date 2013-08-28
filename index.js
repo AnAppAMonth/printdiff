@@ -452,6 +452,60 @@ function _toPrimitive(a) {
     return a;
 }
 
+function _isSingleLine(res) {
+    var prefix = res[0].replace(/\x1B\[[^m]*m/g, '').substring(0, 4);
+    if (prefix !== '    ' && prefix !== '1   ' && prefix !== '+   ') {
+        return false;
+    }
+
+    for (var i = 1; i < res.length; i++) {
+        prefix = res[i].substring(0, 4);
+        if (prefix !== '    ') {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function _cmpStrs(a, b, len) {
+    len--;
+    while(len >= 0) {
+        if (a[len] !== b[len]) {
+            return false;
+        }
+        len--;
+    }
+    return true;
+}
+
+// This function assumes that `_isSingleLine()` is already called on `res` and
+// returns true.
+function _removePrefixes(res, newPrefix, newPrefixLen, wrapWidth) {
+    var prefixCyan = cyan + '1' + clear + '   ';
+    var prefixGreen = green + '+   ';
+    var prefixRed = red + '1   ';
+
+    if (_cmpStrs(res[0], prefixCyan, prefixCyan.length)) {
+        res[0] = res[0].substring(prefixCyan.length);
+
+    } else if (_cmpStrs(res[0], prefixGreen, prefixGreen.length)) {
+        res[0] = green + res[0].substring(prefixGreen.length);
+
+    } else if (_cmpStrs(res[0], prefixRed, prefixRed.length)) {
+        res[0] = red + res[0].substring(prefixRed.length);
+
+    } else {
+        res[0] = res[0].substring(4);
+    }
+
+    for (var i = 1; i < res.length; i++) {
+        res[i] = res[i].substring(4);
+    }
+
+    return _lineBreak(newPrefix + res.join(''), newPrefixLen, wrapWidth);
+}
+
 /**
  * This function uses the objectdiff library to diff two objects or
  * literals and generates a nice-looking diff (inspired by file diffs)
@@ -526,7 +580,13 @@ function _generateObjectDiff(a, b, options) {
 
     } else if (typeof a === 'string' && typeof b === 'string') {
         if (a !== b) {
-            result = result.concat(_generateStringDiff(a, b, options.wrapWidth));
+            var res = _generateStringDiff(a, b, options.wrapWidth);
+
+            if (_isSingleLine(res)) {
+                res = _removePrefixes(res, cyan + '*   ' + clear, 4, options.wrapWidth);
+            }
+
+            result = result.concat(res);
         }
     } else {
         if (a !== b) {

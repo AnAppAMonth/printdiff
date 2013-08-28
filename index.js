@@ -447,7 +447,7 @@ function _generateStringDiff(a, b, wrapWidth) {
  * @returns {Array} empty if equal, otherwise a list of changes.
  * @private
  */
-function _generateObjectDiff(a, b, colors) {
+function _generateObjectDiff(a, b, options) {
     var result = [];
     var numberPat = /^\d+$/;
 
@@ -460,7 +460,7 @@ function _generateObjectDiff(a, b, colors) {
                       '\x1B[31m-   %s\x1B[0m = \x1B[31m%s\x1B[0m'];
     var addStr =     ['+   %s = %s',
                       '\x1B[32m+   %s\x1B[0m = \x1B[32m%s\x1B[0m'];
-    var idx = colors ? 1 : 0;
+    var idx = options.colors ? 1 : 0;
 
     // Traverse the diff object to find all changes.
     function traverse(node, path) {
@@ -485,17 +485,17 @@ function _generateObjectDiff(a, b, colors) {
             result.push(_lineBreak(util.format(changeStr[idx]
                                              , path
                                              , util.inspect(node.removed)
-                                             , util.inspect(node.added)), 4, consoleColumns));
+                                             , util.inspect(node.added)), 4, options.wrapWidth));
 
         } else if (node.changed === 'removed') {
             result.push(_lineBreak(util.format(removeStr[idx]
                                              , path
-                                             , util.inspect(node.value)), 4, consoleColumns));
+                                             , util.inspect(node.value)), 4, options.wrapWidth));
 
         } else if (node.changed === 'added') {
             result.push(_lineBreak(util.format(addStr[idx]
                                              , path
-                                             , util.inspect(node.value)), 4, consoleColumns));
+                                             , util.inspect(node.value)), 4, options.wrapWidth));
         }
     }
 
@@ -506,21 +506,39 @@ function _generateObjectDiff(a, b, colors) {
         traverse(diff, '');
 
     } else if (typeof a === 'string' && typeof b === 'string') {
-        result = result.concat(_generateStringDiff(a, b, consoleColumns));
+        result = result.concat(_generateStringDiff(a, b, options.wrapWidth));
 
     } else {
         if (a !== b) {
             result.push(_lineBreak(util.format(changeStr2[idx]
                                              , util.inspect(a)
-                                             , util.inspect(b)), 4, consoleColumns));
+                                             , util.inspect(b)), 4, options.wrapWidth));
         }
     }
 
     return result;
 }
 
-function printdiff(a, b) {
-    console.log(_generateObjectDiff(a, b, true).join('\n'));
+function printdiff(a, b, options) {
+    if (!(options instanceof Object)) {
+        options = {};
+    }
+
+    // We currently don't support not using colors.
+    options.colors = true;
+    // We currently only support writing to stdout (using `console.log()`).
+    options.output = null;
+
+    if (options.wrapWidth === undefined) {
+        options.wrapWidth = consoleColumns;
+    }
+
+    if (options.output) {
+        options.output.write(_generateObjectDiff(a, b, options).join('\n'));
+        options.output.write('\n');
+    } else {
+        console.log(_generateObjectDiff(a, b, options).join('\n'));
+    }
 }
 
 Object.defineProperty(printdiff, 'configStringDiff', {

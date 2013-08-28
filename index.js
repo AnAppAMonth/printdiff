@@ -266,14 +266,14 @@ function _generateStringDiff(a, b, wrapWidth) {
             // Print the added line, stripping the trailing line break if existed,
             // if `maxChunks` is not exceeded.
             if (result.length >= maxChunks) {
-                result.push(_printLine('...', '', wrapWidth, green));
+                result.push(_printLine('...', '+', wrapWidth, green));
                 break;
             }
             ln = change.right;
             if (ln[ln.length - 1] === '\n') {
                 ln = ln.substring(0, ln.length - 1);
             }
-            result.push(_printLine(ln, '', wrapWidth, green));
+            result.push(_printLine(ln, '+', wrapWidth, green));
 
             // Update `postContextLine`.
             postContextLine = curLine;

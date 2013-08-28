@@ -246,7 +246,11 @@ function _generateStringDiff(a, b, wrapWidth) {
             // for this change.
             _printContextLines(result, lines, curLine, postContextLine, wrapWidth);
 
-            // Print the removed line.
+            // Print the removed line, if `maxChunks` is not exceeded.
+            if (result.length >= maxChunks) {
+                result.push(_printLine('...', curLine + 1 + '', wrapWidth, red));
+                break;
+            }
             result.push(_printLine(lines[curLine], curLine + 1 + '', wrapWidth, red));
 
             // Update `postContextLine`.
@@ -259,7 +263,12 @@ function _generateStringDiff(a, b, wrapWidth) {
             // for this change.
             _printContextLines(result, lines, curLine, postContextLine, wrapWidth);
 
-            // Print the added line, strip the trailing line break if existed.
+            // Print the added line, stripping the trailing line break if existed,
+            // if `maxChunks` is not exceeded.
+            if (result.length >= maxChunks) {
+                result.push(_printLine('...', '', wrapWidth, green));
+                break;
+            }
             ln = change.right;
             if (ln[ln.length - 1] === '\n') {
                 ln = ln.substring(0, ln.length - 1);
@@ -273,6 +282,11 @@ function _generateStringDiff(a, b, wrapWidth) {
             // Print post-context lines for the previous change and pre-context lines
             // for this change.
             _printContextLines(result, lines, curLine, postContextLine, wrapWidth);
+
+            if (result.length >= maxChunks) {
+                result.push(_printLine('...', curLine + 1 + '', wrapWidth, cyan));
+                break;
+            }
 
             // Process char-level diffs
             ln = lines[curLine];
@@ -386,6 +400,7 @@ function _generateStringDiff(a, b, wrapWidth) {
                 // At least print one `colRes` entry, after that, we make sure
                 // we don't surpass the maximums in config.
                 if (j > 0 && (lineChunks > maxChunksPerLine || result.length + res.length > maxChunks)) {
+                    result.push(prefix + '...');
                     break;
                 }
                 result = result.concat(res);
@@ -396,18 +411,26 @@ function _generateStringDiff(a, b, wrapWidth) {
 
             curLine++;
         }
-
-        if (result.length >= maxChunks) {
-            break;
-        }
     }
 
-    // Finally, print post-context lines for the last change.
-    _printContextLines(result, lines, Math.min(postContextLine + contextLines, lines.length),
-                       postContextLine, wrapWidth);
-    if (postContextLine + contextLines < lines.length) {
-        // We haven't reached the end of the input.
-        result.push('...');
+    if (i === changeset.length) {
+        // We finished the loop normally, now print post-context lines for the
+        // last change, and finally an ellipsis if needed.
+        _printContextLines(result, lines, Math.min(postContextLine + contextLines, lines.length),
+                           postContextLine, wrapWidth);
+        if (postContextLine + contextLines < lines.length) {
+            // We haven't reached the end of the input.
+            result.push('...');
+        }
+    } else {
+        // We broke out of the loop because `maxChunks` is reached.
+        // Since we didn't print the current change, we don't need to print
+        // post-context lines for it. Just print an ellipsis if needed to
+        // indicate that there are still content after this point.
+        if (i < changeset.length - 1) {
+            // We haven't reached the end of the input.
+            result.push('...');
+        }
     }
 
     return result;

@@ -436,6 +436,22 @@ function _generateStringDiff(a, b, wrapWidth) {
     return result;
 }
 
+// If a is a String, Number, Boolean, or RegExp instance, convert it to the
+// corresponding primitive for comparison.
+function _toPrimitive(a) {
+    if (a instanceof String) {
+        return a.toString();
+    } else if (a instanceof Number) {
+        return a + 0;
+    } else if (a instanceof Boolean) {
+        /* jshint -W116 */
+        return a == true;
+    } else if (a instanceof RegExp) {
+        return a.toString();
+    }
+    return a;
+}
+
 /**
  * This function uses the objectdiff library to diff two objects or
  * literals and generates a nice-looking diff (inspired by file diffs)
@@ -499,6 +515,9 @@ function _generateObjectDiff(a, b, options) {
         }
     }
 
+    a = _toPrimitive(a);
+    b = _toPrimitive(b);
+
     // objectdiff only supports comparing two objects.
     if (a instanceof Object && b instanceof Object) {
         var diff = objectDiff.diff(a, b);
@@ -506,8 +525,9 @@ function _generateObjectDiff(a, b, options) {
         traverse(diff, '');
 
     } else if (typeof a === 'string' && typeof b === 'string') {
-        result = result.concat(_generateStringDiff(a, b, options.wrapWidth));
-
+        if (a !== b) {
+            result = result.concat(_generateStringDiff(a, b, options.wrapWidth));
+        }
     } else {
         if (a !== b) {
             result.push(_lineBreak(util.format(changeStr2[idx]

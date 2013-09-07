@@ -452,22 +452,6 @@ function _toPrimitive(a) {
     return a;
 }
 
-function _isSingleLine(res) {
-    var prefix = res[0].replace(/\x1B\[[^m]*m/g, '').substring(0, 4);
-    if (prefix !== '    ' && prefix !== '1   ' && prefix !== '+   ') {
-        return false;
-    }
-
-    for (var i = 1; i < res.length; i++) {
-        prefix = res[i].substring(0, 4);
-        if (prefix !== '    ') {
-            return false;
-        }
-    }
-
-    return true;
-}
-
 function _cmpStrs(a, b, len) {
     len--;
     while(len >= 0) {
@@ -483,46 +467,54 @@ var prefixCyan = cyan + '1' + clear + '   ',
     prefixGreen = green + '+   ',
     prefixRed = red + '1   ';
 
-// This function assumes that `_isSingleLine()` is already called on `res` and
-// returns true.
-function _removePrefixes(res, newPrefix, newPrefixLen, wrapWidth) {
-    if (_cmpStrs(res[0], prefixCyan, prefixCyan.length)) {
-        res[0] = res[0].substring(prefixCyan.length);
-
-    } else if (_cmpStrs(res[0], prefixGreen, prefixGreen.length)) {
-        res[0] = green + res[0].substring(prefixGreen.length);
-
-    } else if (_cmpStrs(res[0], prefixRed, prefixRed.length)) {
-        res[0] = red + res[0].substring(prefixRed.length);
-
-    } else {
-        res[0] = res[0].substring(4);
-    }
-
-    for (var i = 1; i < res.length; i++) {
-        res[i] = res[i].substring(4);
-    }
-
-    return _lineBreak(newPrefix + res.join(''), newPrefixLen, wrapWidth);
-}
-
-// Reformat the diff result if it's a single line change (a single line is changed
-// to another single line, and they are represented as a line removal followed by
-// a line addition in the diff result) and the result can be accomodated in a single
-// line.
-// Return the reformatted result if the criterion is satisfied, otherwise return
+// This function checks for 2 special scenarios, and reformats the diff result in
+// these 2 scenarios to make it more readable:
+// 1. A and B are both single-line strings, they are also similar to each other.
+// 2. A and B are both single-line strings, but they are not similar to each other,
+//    and the diff result can be accomodated in a single display line (chunk).
+//
+// In the first scenario, the diff result is a single changed line; in the second
+// scenario, the diff result contains a single line removal followed by a single
+// line addition.
+//
+// Returns the reformatted result if either criterion is satisfied, otherwise returns
 // the original result.
 function _reformatSingleLineChange(res, newPrefix, newPrefixLen, wrapWidth) {
+    var valid,
+        str, wrapped,
+        i;
+
+    // Check for Scenario 1.
+    if (_cmpStrs(res[0], prefixCyan, prefixCyan.length)) {
+        valid = true
+        for (i = 1; i < res.length; i++) {
+            if (res[i].substring(0, 4) !== '    ') {
+                valid = false;
+            }
+        }
+
+        if (valid) {
+            // Scenario 1 is satisfied.
+            res[0] = res[0].substring(prefixCyan.length);
+            for (i = 1; i < res.length; i++) {
+                res[i] = res[i].substring(4);
+            }
+            return _lineBreak(newPrefix + res.join(''), newPrefixLen, wrapWidth);
+        }
+    }
+
+    // Check for Scenario 2.
     if (res.length === 2) {
         if (_cmpStrs(res[0], prefixRed, prefixRed.length) &&
                 _cmpStrs(res[1], prefixGreen, prefixGreen.length)) {
 
-            var str = red + res[0].substring(prefixRed.length) + ' -> ' +
+            str = red + res[0].substring(prefixRed.length) + ' -> ' +
                         green + res[1].substring(prefixGreen.length);
-            var t = _lineBreak(newPrefix + str, newPrefixLen, wrapWidth);
+            wrapped = _lineBreak(newPrefix + str, newPrefixLen, wrapWidth);
 
-            if (t.split('\n').length === 1) {
-                return [t];
+            if (!/\n/.test(wrapped)) {
+                // Scenario 2 is satisfied.
+                return [wrapped];
             }
         }
     }
@@ -623,13 +615,7 @@ function _generateObjectDiff(a, b, options) {
 
             } else {
                 var res = _generateStringDiff(a, b, options.wrapWidth);
-
-                if (_isSingleLine(res)) {
-                    res = _removePrefixes(res, cyan + '*   ' + clear, 4, options.wrapWidth);
-                } else {
-                    res = _reformatSingleLineChange(res, cyan + '*   ' + clear, 4, options.wrapWidth);
-                }
-
+                res = _reformatSingleLineChange(res, cyan + '*   ' + clear, 4, options.wrapWidth);
                 result = result.concat(res);
             }
         }

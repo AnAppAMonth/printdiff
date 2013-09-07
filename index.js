@@ -499,7 +499,7 @@ function _reformatSingleLineChange(res, newPrefix, newPrefixLen, wrapWidth) {
             for (i = 1; i < res.length; i++) {
                 res[i] = res[i].substring(4);
             }
-            return _lineBreak(newPrefix + res.join(''), newPrefixLen, wrapWidth);
+            return _lineBreak(newPrefix + util.inspect(res.join('')).replace(/\\u001b/g, '\u001b'), newPrefixLen, wrapWidth);
         }
     }
 
@@ -508,8 +508,14 @@ function _reformatSingleLineChange(res, newPrefix, newPrefixLen, wrapWidth) {
         if (_cmpStrs(res[0], prefixRed, prefixRed.length) &&
                 _cmpStrs(res[1], prefixGreen, prefixGreen.length)) {
 
-            str = red + res[0].substring(prefixRed.length) + ' -> ' +
-                        green + res[1].substring(prefixGreen.length);
+            str = red
+                + util.inspect(res[0].substring(prefixRed.length, res[0].length - clear.length))
+                + clear
+                + " -> "
+                + green
+                + util.inspect(res[1].substring(prefixGreen.length, res[1].length - clear.length))
+                + clear;
+
             wrapped = _lineBreak(newPrefix + str, newPrefixLen, wrapWidth);
 
             if (!/\n/.test(wrapped)) {

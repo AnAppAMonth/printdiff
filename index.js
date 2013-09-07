@@ -582,10 +582,39 @@ function _generateObjectDiff(a, b, options) {
             }
 
         } else if (node.changed === 'primitive change') {
-            result.push(_lineBreak(util.format(changeStr[idx]
-                                             , path
-                                             , util.inspect(node.removed)
-                                             , util.inspect(node.added)), 4, options.wrapWidth));
+            var removed = _toPrimitive(node.removed),
+                added = _toPrimitive(node.added);
+
+            if (typeof removed === 'string' && typeof added === 'string') {
+                if (removed !== added) {
+                    if (removed === '') {
+                        width = options.wrapWidth - 13 - path.length;
+                        added = util.inspect(added);
+                        if (added.length > width) {
+                            added = added.substring(0, width-4) + "...'";
+                        }
+                        result.push(util.format(changeStr[idx], path, "''", added));
+
+                    } else if (added === '') {
+                        width = options.wrapWidth - 13 - path.length;
+                        removed = util.inspect(removed);
+                        if (removed.length > width) {
+                            removed = removed.substring(0, width-4) + "...'";
+                        }
+                        result.push(util.format(changeStr[idx], path, removed, "''"));
+
+                    } else {
+                        var res = _generateStringDiff(removed, added, options.wrapWidth);
+                        res = _reformatSingleLineChange(res, cyan + '*   ' + path + clear + ' = ', 7 + path.length, options.wrapWidth);
+                        result = result.concat(res);
+                    }
+                }
+            } else {
+                result.push(_lineBreak(util.format(changeStr[idx]
+                                                 , path
+                                                 , util.inspect(removed)
+                                                 , util.inspect(added)), 4, options.wrapWidth));
+            }
 
         } else if (node.changed === 'removed') {
             result.push(_lineBreak(util.format(removeStr[idx]

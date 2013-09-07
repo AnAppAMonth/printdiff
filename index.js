@@ -632,6 +632,11 @@ function printdiff(a, b, options) {
         options.wrapWidth = consoleColumns;
     }
 
+    /* jshint -W018 */
+    if (!(options.wrapWidth >= 20)) {
+        throw new TypeError('expected wrap width to be at least 20, got ' + util.inspect(options.wrapWidth));
+    }
+
     if (options.output) {
         options.output.write(_generateObjectDiff(a, b, options).join('\n'));
         options.output.write('\n');

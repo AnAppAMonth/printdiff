@@ -518,8 +518,9 @@ function _removePrefixes(res, newPrefix, newPrefixLen, wrapWidth) {
  * @private
  */
 function _generateObjectDiff(a, b, options) {
-    var result = [];
-    var numberPat = /^\d+$/;
+    var result = [],
+        numberPat = /^\d+$/,
+        width;
 
     // Format strings
     var changeStr =  ['*   %s = %s -> %s',
@@ -580,13 +581,31 @@ function _generateObjectDiff(a, b, options) {
 
     } else if (typeof a === 'string' && typeof b === 'string') {
         if (a !== b) {
-            var res = _generateStringDiff(a, b, options.wrapWidth);
+            if (a === '') {
+                width = options.wrapWidth - 10;
+                b = util.inspect(b);
+                if (b.length > width) {
+                    b = b.substring(0, width-4) + "...'";
+                }
+                result.push(util.format(changeStr2[idx], "''", b));
 
-            if (_isSingleLine(res)) {
-                res = _removePrefixes(res, cyan + '*   ' + clear, 4, options.wrapWidth);
+            } else if (b === '') {
+                width = options.wrapWidth - 10;
+                a = util.inspect(a);
+                if (a.length > width) {
+                    a = a.substring(0, width-4) + "...'";
+                }
+                result.push(util.format(changeStr2[idx], a, "''"));
+
+            } else {
+                var res = _generateStringDiff(a, b, options.wrapWidth);
+
+                if (_isSingleLine(res)) {
+                    res = _removePrefixes(res, cyan + '*   ' + clear, 4, options.wrapWidth);
+                }
+
+                result = result.concat(res);
             }
-
-            result = result.concat(res);
         }
     } else {
         if (a !== b) {

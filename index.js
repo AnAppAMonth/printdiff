@@ -240,6 +240,9 @@ function _generateStringDiff(a, b, wrapWidth) {
         // enforce the `maxChunksPerLine` setting.
         lineChunks;
 
+    var numLineChanges = 0,
+        numCharChanges = 0;
+
 
     var changeset = charDiff(a, b);
 
@@ -265,6 +268,8 @@ function _generateStringDiff(a, b, wrapWidth) {
             postContextLine = curLine + 1;
 
             curLine++;
+            numLineChanges++;
+            numCharChanges += change.left.length;
 
         } else if (change.type === '+') {   // Added
             // Print post-context lines for the previous change and pre-context lines
@@ -285,6 +290,9 @@ function _generateStringDiff(a, b, wrapWidth) {
 
             // Update `postContextLine`.
             postContextLine = curLine;
+
+            numLineChanges++;
+            numCharChanges += change.right.length;
 
         } else {    // Changed
             // Print post-context lines for the previous change and pre-context lines
@@ -328,6 +336,8 @@ function _generateStringDiff(a, b, wrapWidth) {
 
                     curColumn += chg.left.length;
 
+                    numCharChanges += chg.left.length;
+
                 } else if (chg.type === '+') {   // Added
                     // Print post-context columns for the previous change and pre-context columns
                     // for this change.
@@ -340,6 +350,8 @@ function _generateStringDiff(a, b, wrapWidth) {
                     } else {
                         lastEntry.value += green + chg.right.substring(0, maxColumns) + '...' + clear;
                     }
+
+                    numCharChanges += chg.right.length;
 
                 } else {    // Changed
                     // Print post-context columns for the previous change and pre-context columns
@@ -363,6 +375,8 @@ function _generateStringDiff(a, b, wrapWidth) {
                     }
 
                     curColumn += chg.left.length;
+
+                    numCharChanges += Math.max(chg.left.length, chg.right.length);
                 }
 
                 // Each entry in `colRes` contains one or more chunks.
@@ -418,6 +432,7 @@ function _generateStringDiff(a, b, wrapWidth) {
             postContextLine = curLine + 1;
 
             curLine++;
+            numLineChanges++;
         }
     }
 
@@ -441,6 +456,8 @@ function _generateStringDiff(a, b, wrapWidth) {
         }
     }
 
+    result.numLineChanges = numLineChanges;
+    result.numCharChanges = numCharChanges;
     return result;
 }
 
@@ -543,7 +560,11 @@ function _postProcessStringDiffResult(res, newPrefix, newPrefixLen, wrapWidth) {
     for (i = 0; i < res.length; i++) {
         res[i] = prefix + res[i];
     }
-    res.unshift(newPrefix + faint + '<Extended String Diff>' + clear);
+    res.unshift(newPrefix + faint
+                + util.format('<Extended String Diff: %s line changes, %s char changes>',
+                              res.numLineChanges,
+                              res.numCharChanges)
+                + clear);
     return res;
 }
 

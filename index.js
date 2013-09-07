@@ -479,13 +479,13 @@ function _cmpStrs(a, b, len) {
     return true;
 }
 
+var prefixCyan = cyan + '1' + clear + '   ',
+    prefixGreen = green + '+   ',
+    prefixRed = red + '1   ';
+
 // This function assumes that `_isSingleLine()` is already called on `res` and
 // returns true.
 function _removePrefixes(res, newPrefix, newPrefixLen, wrapWidth) {
-    var prefixCyan = cyan + '1' + clear + '   ';
-    var prefixGreen = green + '+   ';
-    var prefixRed = red + '1   ';
-
     if (_cmpStrs(res[0], prefixCyan, prefixCyan.length)) {
         res[0] = res[0].substring(prefixCyan.length);
 
@@ -504,6 +504,30 @@ function _removePrefixes(res, newPrefix, newPrefixLen, wrapWidth) {
     }
 
     return _lineBreak(newPrefix + res.join(''), newPrefixLen, wrapWidth);
+}
+
+// Reformat the diff result if it's a single line change (a single line is changed
+// to another single line, and they are represented as a line removal followed by
+// a line addition in the diff result) and the result can be accomodated in a single
+// line.
+// Return the reformatted result if the criterion is satisfied, otherwise return
+// the original result.
+function _reformatSingleLineChange(res, newPrefix, newPrefixLen, wrapWidth) {
+    if (res.length === 2) {
+        if (_cmpStrs(res[0], prefixRed, prefixRed.length) &&
+                _cmpStrs(res[1], prefixGreen, prefixGreen.length)) {
+
+            var str = red + res[0].substring(prefixRed.length) + ' -> ' +
+                        green + res[1].substring(prefixGreen.length);
+            var t = _lineBreak(newPrefix + str, newPrefixLen, wrapWidth);
+
+            if (t.split('\n').length === 1) {
+                return [t];
+            }
+        }
+    }
+
+    return res;
 }
 
 /**
@@ -602,6 +626,8 @@ function _generateObjectDiff(a, b, options) {
 
                 if (_isSingleLine(res)) {
                     res = _removePrefixes(res, cyan + '*   ' + clear, 4, options.wrapWidth);
+                } else {
+                    res = _reformatSingleLineChange(res, cyan + '*   ' + clear, 4, options.wrapWidth);
                 }
 
                 result = result.concat(res);

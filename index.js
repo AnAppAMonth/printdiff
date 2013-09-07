@@ -25,6 +25,7 @@ var maxChunks = 200,
 var red = '\x1B[31m',
     green = '\x1B[32m',
     cyan = '\x1B[36m',
+    faint = '\x1B[2m',
     clear = '\x1B[0m';
 
 /**
@@ -484,16 +485,20 @@ var prefixCyan = cyan + '1' + clear + '   ',
 // scenario, the diff result contains a single line removal followed by a single
 // line addition.
 //
+// If neither scenario is met, we need to display the original result. In this case,
+// the original result is post-proccesed to add additional indentation and also a
+// "title" line.
+//
 // Returns the reformatted result if either criterion is satisfied, otherwise returns
-// the original result.
-function _reformatSingleLineChange(res, newPrefix, newPrefixLen, wrapWidth) {
+// the post-processed result.
+function _postProcessStringDiffResult(res, newPrefix, newPrefixLen, wrapWidth) {
     var valid,
         str, wrapped,
         i;
 
     // Check for Scenario 1.
     if (_cmpStrs(res[0], prefixCyan, prefixCyan.length)) {
-        valid = true
+        valid = true;
         for (i = 1; i < res.length; i++) {
             if (res[i].substring(0, 4) !== '    ') {
                 valid = false;
@@ -532,6 +537,13 @@ function _reformatSingleLineChange(res, newPrefix, newPrefixLen, wrapWidth) {
         }
     }
 
+    // We have to display the full diff, prepend a "title" line and add additional
+    // indentation in this case.
+    var prefix = new Array(newPrefixLen + 1).join(' ');
+    for (i = 0; i < res.length; i++) {
+        res[i] = prefix + res[i];
+    }
+    res.unshift(newPrefix + faint + '<Extended String Diff>' + clear);
     return res;
 }
 
@@ -604,8 +616,8 @@ function _generateObjectDiff(a, b, options) {
                         result.push(util.format(changeStr[idx], path, removed, "''"));
 
                     } else {
-                        var res = _generateStringDiff(removed, added, options.wrapWidth);
-                        res = _reformatSingleLineChange(res, cyan + '*   ' + path + clear + ' = ', 7 + path.length, options.wrapWidth);
+                        var res = _generateStringDiff(removed, added, options.wrapWidth - 7 - path.length);
+                        res = _postProcessStringDiffResult(res, cyan + '*   ' + path + clear + ' = ', 7 + path.length, options.wrapWidth);
                         result = result.concat(res);
                     }
                 }
@@ -656,8 +668,8 @@ function _generateObjectDiff(a, b, options) {
                 result.push(util.format(changeStr2[idx], a, "''"));
 
             } else {
-                var res = _generateStringDiff(a, b, options.wrapWidth);
-                res = _reformatSingleLineChange(res, cyan + '*   ' + clear, 4, options.wrapWidth);
+                var res = _generateStringDiff(a, b, options.wrapWidth - 4);
+                res = _postProcessStringDiffResult(res, cyan + '*   ' + clear, 4, options.wrapWidth);
                 result = result.concat(res);
             }
         }

@@ -1,3 +1,10 @@
+/**
+ * TODO:
+ * 1. When diffing strings, call `util.inspect()` on text content in the diff
+ *    result before wrapping, to make invisible characters visible. Currently
+ *    we only do this in a few special scenarios during post-processing.
+ *
+ */
 
 var util = require('util');
 var objectDiff = require('objectdiff');
